@@ -4,12 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.model_selection import cross_val_score
-from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
 
 # Loading the cancer dataset
@@ -65,46 +64,49 @@ X_test = scaler.transform(X_test)
 # Training Support Vector Machine (SVM) classifier
 classifier = svm.SVC(kernel='linear')
 # Finding the best parameter for C:
-param_grid_svm = {'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]}
-grid_search_svm = GridSearchCV(estimator=svm.SVC(kernel='linear'), param_grid=param_grid_svm, scoring='accuracy', cv=5)
+param_grid_svm = {'C': [0.1, 1, 10, 100, 1000]}
+grid_search_svm = GridSearchCV(estimator=svm.SVC(kernel='linear'), param_grid=param_grid_svm, scoring='recall', cv=5)
 grid_search_svm.fit(X_train, y_train)
 print("\nBest Parameter for SVM: ", grid_search_svm.best_params_)
-print("Best Accuracy for SVM: ", grid_search_svm.best_score_)
-classifier = svm.SVC(kernel='linear', C=0.1)
+print("Best Sensitivity for SVM: ", grid_search_svm.best_score_)
+classifier = svm.SVC(kernel='linear', C=1)
 classifier.fit(X_train, y_train)
 
 # Predicting on the test set and evaluating the SVM model
 y_pred = classifier.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred)
-precision = precision_score(y_test, y_pred)
-sensitivity = recall_score(y_test, y_pred)
-specificity = accuracy_score(y_test, y_pred, normalize=True, sample_weight=None)
+accuracy_svm = accuracy_score(y_test, y_pred)
+precision_svm = precision_score(y_test, y_pred)
+sensitivity_svm = recall_score(y_test, y_pred)
+tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
+specificity_svm = tn / (tn + fp)
 y_proba = classifier.decision_function(X_test)
-auc_roc = roc_auc_score(y_test, y_proba)
+auc_roc_svm = roc_auc_score(y_test, y_proba)
 f1 = f1_score(y_test, y_pred)
 print("\nSVM F1:",f1)
-print("SVM Precision:",precision)
-print("SVM Accuracy:", accuracy)
-print("SVM Sensitivity:", sensitivity)
-print("SVM Specificity:", specificity)
-print("SVM AUC-ROC:", auc_roc)
+print("SVM Precision:",precision_svm)
+print("SVM Accuracy:", accuracy_svm)
+print("SVM Sensitivity:", sensitivity_svm)
+print("SVM Specificity:", specificity_svm)
+print("SVM AUC-ROC:", auc_roc_svm)
 # Cross-validation for SVM
-classifier = svm.SVC(kernel='linear', C=0.1)
+scores = cross_val_score(classifier, X, y, cv=5, scoring='recall')
+mean_score = np.mean(scores)
+std_score = np.std(scores)
+print("Cross-validation sensitivity for SVM: {:.2f} ± {:.2f}".format(mean_score, std_score))
 scores = cross_val_score(classifier, X, y, cv=5, scoring='accuracy')
 mean_score = np.mean(scores)
 std_score = np.std(scores)
 print("Cross-validation accuracy for SVM: {:.2f} ± {:.2f}".format(mean_score, std_score))
 
-
 # Training a Logistic Regression model
 log_reg = LogisticRegression(max_iter=5000)
 # Finding the best parameter for C:
 param_grid_lr = {'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]}
-grid_search_lr = GridSearchCV(estimator=log_reg, param_grid=param_grid_lr, scoring='accuracy', cv=5)
+grid_search_lr = GridSearchCV(estimator=log_reg, param_grid=param_grid_lr, scoring='recall', cv=5)
 grid_search_lr.fit(X_train, y_train)
 print("\nBest Parameter for LR: ", grid_search_lr.best_params_)
-print("Best Accuracy for LR: ", grid_search_lr.best_score_)
-log_reg = LogisticRegression(max_iter=5000, C=1)
+print("Best Sensitivity for LR: ", grid_search_lr.best_score_)
+log_reg = LogisticRegression(max_iter=5000, C=10)
 log_reg.fit(X_train, y_train)
 
 # Predicting on the test set and evaluating the logistic regression model
@@ -113,7 +115,8 @@ accuracy_lr = accuracy_score(y_test, y_pred_lr)
 precision_lr = precision_score(y_test, y_pred_lr)
 sensitivity_lr = recall_score(y_test, y_pred_lr)
 f1_lr = f1_score(y_test, y_pred_lr)
-specificity_lr = accuracy_score(y_test, y_pred_lr, normalize=True, sample_weight=None)
+tn_lr, fp_lr, fn_lr, tp_lr = confusion_matrix(y_test, y_pred_lr).ravel()
+specificity_lr = tn_lr / (tn_lr + fp_lr)
 y_proba_lr = log_reg.predict_proba(X_test)[:, 1]
 auc_roc_lr = roc_auc_score(y_test, y_proba_lr)
 print("\nLR F1:", f1_lr)
@@ -124,7 +127,10 @@ print("LR Specificity:", specificity_lr)
 print("LR AUC-ROC:", auc_roc_lr)
 
 # Cross-validation for logistic regression
-log_reg = LogisticRegression(max_iter=5000, C=1)
+scores = cross_val_score(log_reg, X, y, cv=5, scoring='recall')
+mean_score = np.mean(scores)
+std_score = np.std(scores)
+print("Cross-validation sensitivity for LR: {:.2f} ± {:.2f}".format(mean_score, std_score))
 scores = cross_val_score(log_reg, X, y, cv=5, scoring='accuracy')
 mean_score = np.mean(scores)
 std_score = np.std(scores)
@@ -134,11 +140,11 @@ print("Cross-validation accuracy for LR: {:.2f} ± {:.2f}".format(mean_score, st
 rf_classifier = RandomForestClassifier(random_state=0)
 # Finding the best parameters for Random Forest:
 param_grid_rf = {'n_estimators': [50, 100], 'max_depth': [None, 10], 'min_samples_split': [2, 5], 'min_samples_leaf': [1, 2]}
-grid_search_rf = GridSearchCV(estimator=rf_classifier, param_grid=param_grid_rf, scoring='accuracy', cv=5)
+grid_search_rf = GridSearchCV(estimator=rf_classifier, param_grid=param_grid_rf, scoring='recall', cv=5)
 grid_search_rf.fit(X_train, y_train)
 print("\nBest Parameters for RF: ", grid_search_rf.best_params_)
 print("Best Accuracy for RF: ", grid_search_rf.best_score_)
-rf_classifier = RandomForestClassifier(random_state=0, n_estimators=100, max_depth=None, min_samples_split=2, min_samples_leaf=1)
+rf_classifier = RandomForestClassifier(random_state=0, n_estimators=50, max_depth=None, min_samples_split=2, min_samples_leaf=1)
 rf_classifier.fit(X_train, y_train)
 
 # Predicting on the test set and evaluating the Random Forest model
@@ -147,7 +153,8 @@ accuracy_rf = accuracy_score(y_test, y_pred_rf)
 precision_rf = precision_score(y_test, y_pred_rf)
 sensitivity_rf = recall_score(y_test, y_pred_rf)
 f1_rf = f1_score(y_test, y_pred_rf)
-specificity_rf = accuracy_score(y_test, y_pred_rf, normalize=True, sample_weight=None)
+tn_rf, fp_rf, fn_rf, tp_rf = confusion_matrix(y_test, y_pred_rf).ravel()
+specificity_rf = tn_rf / (tn_rf + fp_rf)
 y_proba_rf = rf_classifier.predict_proba(X_test)[:, 1]
 auc_roc_rf = roc_auc_score(y_test, y_proba_rf)
 
@@ -159,7 +166,10 @@ print("Random Forest Specificity:", specificity_rf)
 print("Random Forest AUC-ROC:", auc_roc_rf)
 
 # Cross-validation for Random Forest
-rf_classifier = RandomForestClassifier(random_state=0, n_estimators=100, max_depth=None, min_samples_split=2, min_samples_leaf=1)
+scores_rf = cross_val_score(rf_classifier, X, y, cv=5, scoring='recall')
+mean_score_rf = np.mean(scores_rf)
+std_score_rf = np.std(scores_rf)
+print("Cross-validation sensitivity for Random Forest: {:.2f} ± {:.2f}".format(mean_score_rf, std_score_rf))
 scores_rf = cross_val_score(rf_classifier, X, y, cv=5, scoring='accuracy')
 mean_score_rf = np.mean(scores_rf)
 std_score_rf = np.std(scores_rf)
