@@ -157,7 +157,6 @@ tn_rf, fp_rf, fn_rf, tp_rf = confusion_matrix(y_test, y_pred_rf).ravel()
 specificity_rf = tn_rf / (tn_rf + fp_rf)
 y_proba_rf = rf_classifier.predict_proba(X_test)[:, 1]
 auc_roc_rf = roc_auc_score(y_test, y_proba_rf)
-
 print("\nRandom Forest F1:", f1_rf)
 print("Random Forest Precision:", precision_rf)
 print("Random Forest Accuracy:", accuracy_rf)
