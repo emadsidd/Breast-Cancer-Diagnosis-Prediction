@@ -24,5 +24,5 @@ Key Steps
 4.	Cross-Validation:
 •	Utilizing cross-validation for robust model assessment.
 
-Contributions
+Contributions:
 Originally a group project, additional work was contributed individually, focusing on enhancing the project with the inclusion of the Random Forest model and additional evaluation metrics.
